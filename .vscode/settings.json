@@ -1,2 +1,4 @@
 {
+  "editor.fontFamily": "'Monaco Regular', Consolas, 'Courier New', monospace",
+  "editor.tabSize": 2
 }
