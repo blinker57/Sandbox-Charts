@@ -1,65 +1,75 @@
 // Load the Visualization API and the corechart package.
-google.charts.load('current', {'packages':['corechart']});
+google.charts.load('current', {'packages':['corechart', 'controls']});
+google.charts.setOnLoadCallback(retrieveData);
 
-
-// Set a callback to run when the Google Visualization API is loaded.
-google.charts.setOnLoadCallback(drawPieChart);
-google.charts.setOnLoadCallback(drawAreaChart);
-
-// Callback that creates and populates a data table,
-// instantiates the pie chart, passes in the data and
-// draws it.
-function drawPieChart() {
-  // Create the data table.
-  var data = new google.visualization.DataTable();
-  data.addColumn('string', 'Topping');
-  data.addColumn('number', 'Slices');
-  data.addRows([
-      ['Mushrooms', 3],
-      ['Onions', 1],
-      ['Olives', 1],
-      ['Zucchini', 1],
-      ['Pepperoni', 2]
-  ]);
-
-  // Set chart options 
-  var options = {'title':'How Much Pizza I Ate Last Night',
-                  'width':800,
-                  'height':600};
-
-  // Instantiate and draw our chart, passing in some options.
-  var chart = new google.visualization.PieChart(document.getElementById('chart_div'));
-  chart.draw(data, options);
+function retrieveData() {
+  // get expenses and show in area chart
+  var URL = 'https://docs.google.com/spreadsheets/d/1SL8zq3X1PtzaHFrc7JYZwvOJiQFANf17ygG_fyNHN0I/gviz/tq?gid=192555712&headers=1';
+  var query = 'select A, B, C, D, E';
+  GetDataFromSheet(URL, query, handleExpensesOverTime);
 }
 
-function drawAreaChart() {
-  var daysPerMonth = [
-    [new Date(2016, 0, 1), 31],
-    [new Date(2016, 1, 1), 29],
-    [new Date(2016, 2, 1), 31],
-    [new Date(2016, 3, 1), 30],
-    [new Date(2016, 4, 1), 31],
-    [new Date(2016, 5, 1), 30],
-    [new Date(2016, 6, 1), 31],
-    [new Date(2016, 7, 1), 31],
-    [new Date(2016, 8, 1), 30],
-    [new Date(2016, 9, 1), 31],
-    [new Date(2016, 10, 1), 30],
-    [new Date(2016, 11, 1), 31]
-  ];
+function handleExpensesOverTime(response) {
 
-  var data = google.visualization.arrayToDataTable(daysPerMonth, true);
+  var data = response.getDataTable();
 
-  // Chart options
-  var options = {
-    title: 'Number of Days Per Month in 2016',
-    animation: { startup: true, duration: 2000 },
-    legend: { position: 'none' },
-    width: 500,
-    height: 350
+  var container = new google.visualization.Dashboard(
+    document.getElementById('divExpensesRangeSlider'));
+
+  var rangeControl = new google.visualization.ControlWrapper({  
+    controlType: 'ChartRangeFilter',
+    containerId: 'divExpensesRangeSlider',
+    options: {
+      filterColumnIndex: 0,
+      ui: {
+        chartType: 'AreaChart',
+        chartOptions: {
+          height: 50,
+          isStacked: true,
+          vAxis: { minValue: 0 },
+          chartArea: { left: 100, right: 95 }
+        },
+      }
+    }
+  });
+
+  var areaChartOptions = {
+    title: 'Monthly Expenses',
+    height: 300,
+    isStacked: true,
+    vAxis: { 
+      minValue: 0,
+      format: 'currency'
+    },
+    chartArea: { height: 250 },
   };
 
-  // Instantiate and draw our chart, passing in some options.
-  var chart = new google.visualization.AreaChart(document.getElementById('chart_div2'));
-  chart.draw(data, options);
+  var chart = new google.visualization.ChartWrapper({
+    chartType: 'AreaChart',
+    containerId: 'divExpensesOverTimeChart',
+    options: areaChartOptions
+  });
+
+  container.bind(rangeControl, chart);
+  container.draw(data);
+}
+
+function GetDataFromSheet(URL, queryString, callback) {
+  var query = new google.visualization.Query(URL);
+  query.setQuery(queryString);
+  query.send(gotResponse);
+
+  function gotResponse(response) {
+    if (response.isError()) {
+      console.log(response.getReasons());
+      alert('Error in query: ' + response.getMessage() + " " + response.getDetailedMessage());
+      return;
+    }
+    if (response.hasWarning()) {
+      console.log(response.getReasons());
+      alert('Warning from query: ' + response.getMessage() + " " + response.getDetailedMessage());
+      return;
+    }
+    callback(response);
+  }
 }
